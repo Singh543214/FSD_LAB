@@ -1,0 +1,119 @@
+-------------Server.js---------- 
+const express = require("express"); 
+const mongoose = require("mongoose"); 
+const path = require("path"); 
+ 
+const app = express(); 
+ 
+// Middleware 
+app.use(express.urlencoded({ extended: true })); // Parse form data 
+app.set("view engine", "ejs"); 
+app.set("views", path.join(__dirname, "views")); 
+ 
+// MongoDB connection 
+const DB_URL = "mongodb+srv://fsda:fsda@cluster0.mxvsjjm.mongodb.net/fsda "; 
+ 
+mongoose 
+  .connect(DB_URL, { 
+    useNewUrlParser: true, 
+    useUnifiedTopology: true, 
+  }) 
+  .then(() => { 
+    console.log(" MongoDB connected successfully"); 
+ 
+    // Start server only if DB connected 
+    app.listen(3000, () => { 
+      console.log(" Server running at http://localhost:3000"); 
+    }); 
+  }) 
+  .catch((err) => { 
+    console.error(" MongoDB connection failed:", err.message); 
+    process.exit(1); // Stop app if DB not connected 
+  }); 
+                                                                                                                     
+ 
+ 
+// Schema + Model 
+const userSchema = new mongoose.Schema({ 
+  name: String, 
+  email: String, 
+  age: Number, 
+}); 
+const User = mongoose.model("User", userSchema); 
+ 
+// ---------------- ROUTES ---------------- 
+ 
+// Home → List users + Add form 
+app.get("/", async (req, res) => { 
+  const users = await User.find(); 
+  res.render("index", { users }); 
+}); 
+ 
+// CREATE 
+app.post("/users", async (req, res) => { 
+  await User.create(req.body); 
+  res.redirect("/"); 
+}); 
+ 
+// EDIT form 
+app.get("/users/edit/:id", async (req, res) => { 
+  const user = await User.findById(req.params.id); 
+  res.render("edit", { user }); 
+}); 
+ 
+// UPDATE 
+app.post("/users/update/:id", async (req, res) => { 
+  await User.findByIdAndUpdate(req.params.id, req.body); 
+  res.redirect("/"); 
+}); 
+ 
+// DELETE 
+app.post("/users/delete/:id", async (req, res) => { 
+  await User.findByIdAndDelete(req.params.id); 
+  res.redirect("/"); 
+});
+
+---------views/index.ejs -----
+<!DOCTYPE html> 
+<html> 
+<head> 
+  <title>CRUD with Forms</title> 
+</head> 
+<body> 
+  <h1>User Management</h1> 
+  <h2>Add User</h2> 
+  <form action="/users" method="POST"> 
+    <input type="text" name="name" placeholder="Name" required /> 
+    <input type="email" name="email" placeholder="Email" required /> 
+    <input type="number" name="age" placeholder="Age" required /> 
+    <button type="submit">Add</button> 
+  </form> 
+  <h2>All Users</h2> 
+  <ul> 
+    <% users.forEach(user => { %> 
+      <li> 
+        <%= user.name %> - <%= user.email %> - <%= user.age %> years 
+        <form action="/users/delete/<%= user._id %>" method="POST" style="display:inline;"> 
+          <button type="submit">Delete</button> 
+        </form> 
+        <a href="/users/edit/<%= user._id %>">Edit</a> 
+      </li> 
+    <% }) %> 
+  </ul> 
+</body> 
+</html> 
+views/edit.ejs 
+<!DOCTYPE html> 
+<html> 
+<head> 
+  <title>Edit User</title></head> 
+<body> 
+  <h1>Edit User</h1> 
+  <form action="/users/update/<%= user._id %>" method="POST"> 
+    <input type="text" name="name" value="<%= user.name %>" required /> 
+    <input type="email" name="email" value="<%= user.email %>" required /> 
+    <input type="number" name="age" value="<%= user.age %>" required /> 
+    <button type="submit">Update</button> 
+  </form> 
+  <a href="/">Back</a> 
+</body></html>
